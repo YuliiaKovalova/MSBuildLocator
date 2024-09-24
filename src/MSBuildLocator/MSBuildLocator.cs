@@ -116,6 +116,23 @@ namespace Microsoft.Build.Locator
             return instance;
         }
 
+        private static void HandleAssemblyResolutionIssues()
+        {
+            AppDomain.CurrentDomain.AssemblyResolve += (sender, eventArgs) =>
+            {
+                var assemblyName = new AssemblyName(eventArgs.Name);
+                var loadedAssembly = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName().Name == assemblyName.Name);
+
+                if (loadedAssembly != null)
+                {
+                    return loadedAssembly;
+                }
+
+                return null;
+            };
+        }
+
+
         /// <summary>
         ///     Add assembly resolution for Microsoft.Build core dlls in the current AppDomain from the specified
         ///     instance of Visual Studio. See <see cref="QueryVisualStudioInstances()" /> to discover Visual Studio
@@ -135,6 +152,8 @@ namespace Microsoft.Build.Locator
                 // but we are using msbuild dlls directly and therefore need to mimic that.
                 ApplyDotNetSdkEnvironmentVariables(instance.MSBuildPath);
             }
+
+            HandleAssemblyResolutionIssues();
 
             // Find and load NuGet assemblies if msbuildPath is in a VS installation
             string nugetPath = Path.GetFullPath(Path.Combine(instance.MSBuildPath, "..", "..", "..", "Common7", "IDE", "CommonExtensions", "Microsoft", "NuGet"));
